@@ -32,3 +32,7 @@ Set `payload.failuresBeforeSuccess` on an event to exercise retry and dead-lette
   }
 }
 ```
+
+## Smoke Check
+
+- `npm run smoke` boots an isolated Docker Compose stack, verifies Kafka publish-consume plus dead-letter replay, and tears the stack down automatically.
