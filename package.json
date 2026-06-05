@@ -20,6 +20,8 @@
     "@nestjs/microservices": "^11.1.24",
     "@nestjs/platform-express": "^11.1.24",
     "kafkajs": "^2.2.4",
+    "postgres": "^3.4.9",
+    "redis": "^6.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.4.3"

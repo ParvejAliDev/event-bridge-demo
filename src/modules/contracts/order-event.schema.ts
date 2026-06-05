@@ -10,7 +10,7 @@ export const orderEventSchema = z.object({
     'order.status.changed',
   ]),
   occurredAt: z.string().datetime(),
-  payload: z.record(z.string(), z.unknown()).default({}),
+  payload: z.record(z.string(), z.json()).default({}),
 });
 
 export type OrderEvent = z.infer<typeof orderEventSchema>;

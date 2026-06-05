@@ -9,6 +9,10 @@ const envSchema = z.object({
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
   KAFKA_CLIENT_ID: z.string().min(1, 'KAFKA_CLIENT_ID is required'),
   KAFKA_BROKERS: z.string().min(1, 'KAFKA_BROKERS is required'),
+  KAFKA_TOPIC: z.string().min(1).default('order-events'),
+  KAFKA_CONSUMER_GROUP: z.string().min(1).default('order-events-local'),
+  PROCESSING_MAX_RETRIES: z.coerce.number().int().nonnegative().default(3),
+  IDEMPOTENCY_TTL_SECONDS: z.coerce.number().int().positive().default(300),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

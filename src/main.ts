@@ -8,6 +8,7 @@ import { getEnv } from './config/env';
 async function bootstrap() {
   const env = getEnv(process.env);
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
   await app.listen(env.PORT);
 }
 
