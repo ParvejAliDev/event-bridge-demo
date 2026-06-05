@@ -1,4 +1,5 @@
 import { getSql } from '../../lib/db';
+import { serializeTimestamp } from '../../lib/timestamps';
 import type { OrderEvent } from '../contracts/order-event.schema';
 
 export type ProcessedEventRecord = {
@@ -9,7 +10,7 @@ export type ProcessedEventRecord = {
   payload: OrderEvent['payload'];
   attemptCount: number;
   lastError: string | null;
-  processedAt: string;
+  processedAt: Date | string;
 };
 
 export async function findProcessedEvent(
@@ -25,13 +26,22 @@ export async function findProcessedEvent(
       payload,
       attempt_count as "attemptCount",
       last_error as "lastError",
-      to_char(processed_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as "processedAt"
+      processed_at as "processedAt"
     from processed_events
     where event_id = ${eventId}
     limit 1
   `;
 
-  return rows[0] ?? null;
+  const row = rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    processedAt: serializeTimestamp(row.processedAt),
+  };
 }
 
 export async function recordEventAttempt(input: {
@@ -141,23 +151,28 @@ export async function listDeadLetterEvents(limit = 20): Promise<
 > {
   const sql = getSql();
 
-  return sql<
+  const rows = await sql<
     Array<{
       eventId: string;
       reason: string;
       payload: OrderEvent;
-      createdAt: string;
+      createdAt: Date | string;
     }>
   >`
     select
       event_id as "eventId",
       reason,
       payload,
-      to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as "createdAt"
+      created_at as "createdAt"
     from dead_letter_events
     order by created_at desc
     limit ${limit}
   `;
+
+  return rows.map((row) => ({
+    ...row,
+    createdAt: serializeTimestamp(row.createdAt),
+  }));
 }
 
 export async function removeDeadLetterEvent(eventId: string): Promise<void> {

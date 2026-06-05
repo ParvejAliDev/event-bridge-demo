@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { getEnv } from '../../config/env';
 import { ensureRedisConnection } from '../../lib/redis';
 import type { OrderEvent } from '../contracts/order-event.schema';
 import { createDeadLetterRecord } from '../dlq';
 import { createEventIdempotencyKey } from '../idempotency';
-import type { KafkaPublisherService } from '../publishers/kafka.publisher';
+import { KafkaPublisherService } from '../publishers/kafka.publisher';
 import { determineProcessingOutcome } from './policy';
 import {
   addDeadLetterEvent,
@@ -25,11 +25,18 @@ type AcceptedEventResult = {
   reason?: string;
 };
 
+type HandleConsumedEventOptions = {
+  replay?: boolean;
+};
+
 @Injectable()
 export class ProcessingService {
   private readonly logger = new Logger(ProcessingService.name);
 
-  constructor(private readonly kafkaPublisher: KafkaPublisherService) {}
+  constructor(
+    @Inject(KafkaPublisherService)
+    private readonly kafkaPublisher: KafkaPublisherService,
+  ) {}
 
   async accept(
     event: OrderEvent,
@@ -52,7 +59,14 @@ export class ProcessingService {
     return this.handleConsumedEvent(event);
   }
 
-  async handleConsumedEvent(event: OrderEvent): Promise<AcceptedEventResult> {
+  async replayDeadLetterEvent(event: OrderEvent): Promise<AcceptedEventResult> {
+    return this.handleConsumedEvent(event, { replay: true });
+  }
+
+  async handleConsumedEvent(
+    event: OrderEvent,
+    options: HandleConsumedEventOptions = {},
+  ): Promise<AcceptedEventResult> {
     const env = getEnv(process.env);
     const idempotencyKey = createEventIdempotencyKey(event);
     const redisClient = await ensureRedisConnection();
@@ -87,8 +101,12 @@ export class ProcessingService {
     }
 
     let attemptNumber = Math.max(1, (existingRecord?.attemptCount ?? 0) + 1);
+    const maxAttemptNumber =
+      options.replay && existingRecord?.status === 'dead_lettered'
+        ? attemptNumber
+        : env.PROCESSING_MAX_RETRIES + 1;
 
-    while (attemptNumber <= env.PROCESSING_MAX_RETRIES + 1) {
+    while (attemptNumber <= maxAttemptNumber) {
       const outcome = determineProcessingOutcome({
         event,
         attemptNumber,

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Inject,
   NotFoundException,
   Param,
   Post,
@@ -9,7 +10,7 @@ import {
 import { ensureRedisConnection } from '../../lib/redis';
 import { orderEventSchema } from '../contracts/order-event.schema';
 import { createEventIdempotencyKey } from '../idempotency';
-import type { KafkaPublisherService } from '../publishers/kafka.publisher';
+import { ProcessingService } from '../processing/processing.service';
 import {
   listDeadLetterEvents,
   removeDeadLetterEvent,
@@ -17,7 +18,10 @@ import {
 
 @Controller('events')
 export class ReplayController {
-  constructor(private readonly kafkaPublisher: KafkaPublisherService) {}
+  constructor(
+    @Inject(ProcessingService)
+    private readonly processingService: ProcessingService,
+  ) {}
 
   @Get('dead-letter')
   async deadLetter() {
@@ -40,13 +44,20 @@ export class ReplayController {
     await redisClient.del(
       `event-bridge:idempotency:${createEventIdempotencyKey(event)}`,
     );
-    await this.kafkaPublisher.publish(event);
-    await removeDeadLetterEvent(eventId);
+
+    const replayResult =
+      await this.processingService.replayDeadLetterEvent(event);
+
+    if (replayResult.status !== 'dead_letter') {
+      await removeDeadLetterEvent(eventId);
+    }
 
     return {
-      replayed: true,
+      replayed: replayResult.status !== 'dead_letter',
       eventId,
       reason: eventRecord.reason,
+      outcome: replayResult.status,
+      attempts: replayResult.attempts,
     };
   }
 }

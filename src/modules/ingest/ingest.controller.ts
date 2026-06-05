@@ -1,11 +1,14 @@
-import { Body, Controller, Post, Query } from '@nestjs/common';
+import { Body, Controller, Inject, Post, Query } from '@nestjs/common';
 
 import { orderEventSchema } from '../contracts/order-event.schema';
-import type { ProcessingService } from '../processing/processing.service';
+import { ProcessingService } from '../processing/processing.service';
 
 @Controller('events')
 export class IngestController {
-  constructor(private readonly processingService: ProcessingService) {}
+  constructor(
+    @Inject(ProcessingService)
+    private readonly processingService: ProcessingService,
+  ) {}
 
   @Post('ingest')
   ingest(

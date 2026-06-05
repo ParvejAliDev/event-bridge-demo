@@ -1,10 +1,11 @@
 import type { OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Kafka, type Consumer } from 'kafkajs';
 
 import { getEnv } from '../../config/env';
 import { orderEventSchema } from '../contracts/order-event.schema';
-import type { ProcessingService } from '../processing/processing.service';
+import { ProcessingService } from '../processing/processing.service';
+import { ensureKafkaTopic } from './kafka-topics';
 
 @Injectable()
 export class KafkaConsumerService
@@ -13,7 +14,10 @@ export class KafkaConsumerService
   private readonly logger = new Logger(KafkaConsumerService.name);
   private consumer: Consumer | null = null;
 
-  constructor(private readonly processingService: ProcessingService) {}
+  constructor(
+    @Inject(ProcessingService)
+    private readonly processingService: ProcessingService,
+  ) {}
 
   private getKafka() {
     const env = getEnv(process.env);
@@ -30,7 +34,11 @@ export class KafkaConsumerService
     }
 
     const env = getEnv(process.env);
-    this.consumer = this.getKafka().consumer({
+    const kafka = this.getKafka();
+
+    await ensureKafkaTopic(kafka.admin(), env.KAFKA_TOPIC);
+
+    this.consumer = kafka.consumer({
       groupId: env.KAFKA_CONSUMER_GROUP,
       allowAutoTopicCreation: true,
     });
