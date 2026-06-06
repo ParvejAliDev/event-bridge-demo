@@ -44,6 +44,41 @@ export async function findProcessedEvent(
   };
 }
 
+export type EventAttemptRecord = {
+  attemptNumber: number;
+  createdAt: string;
+  errorMessage: string | null;
+  status: 'processed' | 'retry' | 'dead_letter';
+};
+
+export async function listEventAttempts(
+  eventId: string,
+): Promise<EventAttemptRecord[]> {
+  const sql = getSql();
+  const rows = await sql<
+    Array<{
+      attemptNumber: number;
+      createdAt: Date | string;
+      errorMessage: string | null;
+      status: 'processed' | 'retry' | 'dead_letter';
+    }>
+  >`
+    select
+      attempt_number as "attemptNumber",
+      created_at as "createdAt",
+      error_message as "errorMessage",
+      status
+    from event_attempts
+    where event_id = ${eventId}
+    order by attempt_number asc
+  `;
+
+  return rows.map((row) => ({
+    ...row,
+    createdAt: serializeTimestamp(row.createdAt),
+  }));
+}
+
 export async function recordEventAttempt(input: {
   eventId: string;
   attemptNumber: number;
@@ -173,6 +208,43 @@ export async function listDeadLetterEvents(limit = 20): Promise<
     ...row,
     createdAt: serializeTimestamp(row.createdAt),
   }));
+}
+
+export async function findDeadLetterEvent(eventId: string): Promise<{
+  createdAt: string;
+  eventId: string;
+  payload: OrderEvent;
+  reason: string;
+} | null> {
+  const sql = getSql();
+  const rows = await sql<
+    Array<{
+      eventId: string;
+      reason: string;
+      payload: OrderEvent;
+      createdAt: Date | string;
+    }>
+  >`
+    select
+      event_id as "eventId",
+      reason,
+      payload,
+      created_at as "createdAt"
+    from dead_letter_events
+    where event_id = ${eventId}
+    limit 1
+  `;
+
+  const row = rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    createdAt: serializeTimestamp(row.createdAt),
+  };
 }
 
 export async function removeDeadLetterEvent(eventId: string): Promise<void> {

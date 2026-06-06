@@ -20,33 +20,34 @@ type DemoScenarioDefinition = DemoScenario & {
   failuresBeforeSuccess: number;
 };
 
-const demoScenarioDefinitions: Record<DemoScenarioId, DemoScenarioDefinition> = {
-  happy_path: {
-    id: 'happy_path',
-    title: 'Happy path',
-    summary: 'A normal order event moves straight through the bridge.',
-    transportLabel: 'Kafka pipeline',
-    type: 'order.created',
-    failuresBeforeSuccess: 0,
-  },
-  retries_then_success: {
-    id: 'retries_then_success',
-    title: 'Retries then success',
-    summary: 'A transient failure retries twice before the event succeeds.',
-    transportLabel: 'Kafka pipeline',
-    type: 'order.updated',
-    failuresBeforeSuccess: 2,
-  },
-  dead_letter_then_replay: {
-    id: 'dead_letter_then_replay',
-    title: 'Dead-letter then replay',
-    summary:
-      'The retry budget is exhausted, then the event is replayed successfully.',
-    transportLabel: 'Kafka pipeline',
-    type: 'order.cancelled',
-    failuresBeforeSuccess: 4,
-  },
-};
+const demoScenarioDefinitions: Record<DemoScenarioId, DemoScenarioDefinition> =
+  {
+    happy_path: {
+      id: 'happy_path',
+      title: 'Happy path',
+      summary: 'A normal order event moves straight through the bridge.',
+      transportLabel: 'Kafka pipeline',
+      type: 'order.created',
+      failuresBeforeSuccess: 0,
+    },
+    retries_then_success: {
+      id: 'retries_then_success',
+      title: 'Retries then success',
+      summary: 'A transient failure retries twice before the event succeeds.',
+      transportLabel: 'Kafka pipeline',
+      type: 'order.updated',
+      failuresBeforeSuccess: 2,
+    },
+    dead_letter_then_replay: {
+      id: 'dead_letter_then_replay',
+      title: 'Dead-letter then replay',
+      summary:
+        'The retry budget is exhausted, then the event is replayed successfully.',
+      transportLabel: 'Kafka pipeline',
+      type: 'order.cancelled',
+      failuresBeforeSuccess: 4,
+    },
+  };
 
 function toDemoScenario({
   id,
@@ -63,7 +64,9 @@ function toDemoScenario({
 }
 
 export function listDemoScenarios(): DemoScenario[] {
-  return demoScenarioIds.map((id) => toDemoScenario(demoScenarioDefinitions[id]));
+  return demoScenarioIds.map((id) =>
+    toDemoScenario(demoScenarioDefinitions[id]),
+  );
 }
 
 export function buildScenarioEvent(id: DemoScenarioId): OrderEvent {
