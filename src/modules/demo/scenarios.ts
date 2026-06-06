@@ -8,11 +8,14 @@ export const demoScenarioIds = [
 
 export type DemoScenarioId = (typeof demoScenarioIds)[number];
 
-type DemoScenarioDefinition = {
+export type DemoScenario = {
   id: DemoScenarioId;
   title: string;
   summary: string;
   transportLabel: 'Kafka pipeline';
+};
+
+type DemoScenarioDefinition = DemoScenario & {
   type: OrderEvent['type'];
   failuresBeforeSuccess: number;
 };
@@ -45,8 +48,22 @@ const demoScenarioDefinitions: Record<DemoScenarioId, DemoScenarioDefinition> = 
   },
 };
 
-export function listDemoScenarios(): DemoScenarioDefinition[] {
-  return demoScenarioIds.map((id) => demoScenarioDefinitions[id]);
+function toDemoScenario({
+  id,
+  title,
+  summary,
+  transportLabel,
+}: DemoScenarioDefinition): DemoScenario {
+  return {
+    id,
+    title,
+    summary,
+    transportLabel,
+  };
+}
+
+export function listDemoScenarios(): DemoScenario[] {
+  return demoScenarioIds.map((id) => toDemoScenario(demoScenarioDefinitions[id]));
 }
 
 export function buildScenarioEvent(id: DemoScenarioId): OrderEvent {

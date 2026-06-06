@@ -14,23 +14,40 @@ describe('demo scenarios', () => {
       'dead_letter_then_replay',
     ]);
 
-    expect(listDemoScenarios()).toMatchObject([
+    expect(listDemoScenarios()).toEqual([
       {
         id: 'happy_path',
         title: 'Happy path',
+        summary: 'A normal order event moves straight through the bridge.',
         transportLabel: 'Kafka pipeline',
       },
       {
         id: 'retries_then_success',
         title: 'Retries then success',
+        summary: 'A transient failure retries twice before the event succeeds.',
         transportLabel: 'Kafka pipeline',
       },
       {
         id: 'dead_letter_then_replay',
         title: 'Dead-letter then replay',
+        summary:
+          'The retry budget is exhausted, then the event is replayed successfully.',
         transportLabel: 'Kafka pipeline',
       },
     ]);
+  });
+
+  it('returns fresh public metadata objects on each call', () => {
+    const scenarios = listDemoScenarios();
+
+    scenarios[0]!.title = 'Mutated title';
+
+    expect(listDemoScenarios()[0]).toEqual({
+      id: 'happy_path',
+      title: 'Happy path',
+      summary: 'A normal order event moves straight through the bridge.',
+      transportLabel: 'Kafka pipeline',
+    });
   });
 
   it('builds deterministic payload shapes for each guided scenario', () => {
